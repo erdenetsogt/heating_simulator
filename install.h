@@ -220,11 +220,7 @@ echo ""
 echo "📦 4. Python сангууд суулгаж байна..."
 
 # Python3 болон pip шалгах
-if ! command -v python3 &> /dev/null; then
-    echo "⚠️  Python3 байхгүй байна. Суулгаж байна..."
-    sudo apt update
-    sudo apt install -y python3 python3-pip
-fi
+
 
 # requests санг суулгах
 sudo pip3 install requests
