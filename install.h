@@ -183,6 +183,8 @@ echo "✅ Python скрипт үүслээ"
 # ============================================
 # 3. SYSTEMD SERVICE ҮҮСГЭХ
 # ============================================
+VENV_PATH=$INSTALL_DIR/.venv
+Project_DIR=$(pwd)
 
 echo ""
 echo "⚙️  3. systemd service үүсгэж байна..."
@@ -197,7 +199,7 @@ Wants=network-online.target
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/python3 $INSTALL_DIR/simulator.py
+ExecStart=$VENV_PATH/bin/python $INSTALL_DIR/simulator.py
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -218,12 +220,23 @@ echo "✅ systemd service үүслээ"
 
 echo ""
 echo "📦 4. Python сангууд суулгаж байна..."
+sudo apt update
+sudo apt install -y python3-venv python3-pip
 
-# Python3 болон pip шалгах
+if [ ! -d "$VENV_PATH" ]; then
+    echo "Creating virtual environment at $VENV_PATH..."
+    python3 -m venv "$VENV_PATH"
+fi
+
+# 3. Install Python packages inside the venv
+# Note: Pointing directly to the venv pip avoids needing to 'activate' the script
+echo "Installing Python packages..."
+"$VENV_PATH/bin/pip" install --upgrade pip
+"$VENV_PATH/bin/pip" install requests
+# Activate the virtual environment
+source "$VENV_PATH/bin/activate"
 
 
-# requests санг суулгах
-sudo pip3 install requests
 
 echo "✅ Python сангууд суулгагдлаа"
 

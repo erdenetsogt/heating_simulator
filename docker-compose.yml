@@ -1,0 +1,50 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: Mongol@12345
+      MYSQL_DATABASE: nodejs_prisma
+      MYSQL_USER: erdene
+      MYSQL_PASSWORD: Pa55w0rd@123
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+    # Connects the MySQL service to the Tailscale network
+    network_mode: service:tailscale
+  postgres:
+    image: postgres:latest
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: erdene
+      POSTGRES_PASSWORD: Pa55w0rd@123
+      POSTGRES_DB: nodejs_prisma
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    network_mode: service:tailscale
+  api:
+    image: erdenetsogt/api-web:latest
+    container_name: api
+    restart: always
+    network_mode: service:tailscale
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale_node
+    hostname: mysql-server-tailscale # Choose a unique hostname for your Tailscale node
+    volumes:
+      - ./ts-data:/var/lib/tailscale # Persist Tailscale state
+      - /dev/net/tun:/dev/net/tun # Required for Tailscale to function
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      TS_AUTHKEY: tskey-auth-k2731ga6Mi11CNTRL-Wtf1EEtBdZA3Z2uu81WEaA9jPjYJAdpcf 
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_ACCEPT_DNS: "true" # Optional: allows Tailscale to manage DNS within the container
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  #tailscale_state:
+  postgres_data:
