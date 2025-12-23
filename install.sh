@@ -137,7 +137,7 @@ sudo cat > "$INSTALL_DIR/config.json" << 'EOF'
 {
   "device_id": "SUBSTATION_01",
   "location": "Улаанбаатар, Сүхбаатар дүүрэг",
-  "server_url": "http://localhost:3000/api/readings/batch",
+  "server_url": "http://mysql-server-tailscale.tailb51a53.ts.net:5000/api/readings/batch",
   "send_interval": 3,
   "sensors": {
     "supply_temp": {"base": 75.0, "min": 60.0, "max": 95.0},
