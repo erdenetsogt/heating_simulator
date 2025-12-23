@@ -1,8 +1,24 @@
 #!/usr/bin/env python3
 """
-ДУЛААНЫ ДАХИН ДАМЖУУЛАХ ТӨВИЙН СИМУЛЯТОР
-6 мэдрэгч (3 температур, 3 даралт)
-Ubuntu systemd service
+ДУЛААНЫ ДАХИН ДАМЖУУЛАХ ТӨВИЙН БОДИТ СИМУЛЯТОР
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Систем:
+    Дулааны станц → [Орох шугам] → Бойлер → [Гарах шугам] → Хэрэглэгч
+                                                              ↓
+    Дулааны станц ← [Буцах шугам] ← Бойлер ← [Ирэх шугам] ← Хэрэглэгч
+
+Шугамууд:
+    1. Supply Line (Станцаас ирэх)    - Temp 1, Pressure 1
+    2. Forward Line (Хэрэглэгч рүү)   - Temp 2, Pressure 2
+    3. Return Line (Хэрэглэгчээс)     - Temp 3, Pressure 3
+    4. Return Line (Станц руу)        - Temp 4, Pressure 4
+
+Физик хамаарал:
+    • Температур: T1 > T2 > T3 > T4 (дулаан алдагдана)
+    • Даралт: P1 > P2 ≈ P3 > P4 (торны эсэргүүцэл)
+    • Бойлерийн үр ашиг: 10-15°C температур алдагдал
+    • Урсгалын эсэргүүцэл: 0.3-0.5 bar даралт алдагдал
 """
 
 import time
@@ -12,7 +28,7 @@ import random
 import math
 import requests
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, Tuple
 import signal
 import sys
 
@@ -21,115 +37,121 @@ import sys
 # ============================================
 
 class Config:
-    # Дулааны төв
+    # Төхөөрөмж
     DEVICE_ID = "SUBSTATION_01"
     LOCATION = "Улаанбаатар, Сүхбаатар дүүрэг"
     
     # Сервер
-    SERVER_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/v/m/current/"
-    SEND_INTERVAL = 3  # 3 секунд
+    SERVER_URL = "http://localhost:3000/api/readings/batch"
+    SEND_INTERVAL = 3  # секунд
     
-    # Мэдрэгчийн параметрүүд
+    # Физик параметрүүд
+    PHYSICS = {
+        # Дулааны станцын температур (гадны температураас хамаарна)
+        'station_base_temp': 85.0,      # Үндсэн температур (°C)
+        'outdoor_temp_influence': 0.5,  # Гадны температурын нөлөө
+        
+        # Температурын алдагдал
+        'pipe_heat_loss': 2.0,          # Шугам бүрт 2°C
+        'boiler_heat_loss': 12.0,       # Бойлерт 12°C
+        
+        # Даралтын алдагдал
+        'supply_pressure': 6.5,         # Орох даралт (bar)
+        'pipe_pressure_drop': 0.15,     # Шугам бүрт 0.15 bar
+        'boiler_pressure_drop': 0.4,    # Бойлерт 0.4 bar
+        
+        # Хэлбэлзэл
+        'temp_noise': 0.8,              # Температурын шуугиан
+        'pressure_noise': 0.1,          # Даралтын шуугиан
+    }
+    
+    # Мэдрэгчийн тодорхойлолт
     SENSORS = {
-        # Температур (°C)
-        'supply_temp': {
+        # Шугам 1: Станцаас ирэх (Supply from station)
+        'supply_from_station_temp': {
             'id': 0,
-            'name': 'Орох температур',
+            'name': 'Станцаас ирэх температур',
             'type': 'temperature',
             'unit': '°C',
-            'base': 75.0,      # Үндсэн утга
-            'variance': 5.0,   # Хэлбэлзэл ±5°C
-            'min': 60.0,
-            'max': 95.0,
-            'trend_factor': 0.05  # Улирлын өөрчлөлт
+            'pipe': 'supply_station'
         },
-        'return_temp': {
+        'supply_from_station_pressure': {
             'id': 1,
-            'name': 'Буцах температур',
-            'type': 'temperature',
-            'unit': '°C',
-            'base': 55.0,
-            'variance': 4.0,
-            'min': 45.0,
-            'max': 70.0,
-            'trend_factor': 0.05
+            'name': 'Станцаас ирэх даралт',
+            'type': 'pressure',
+            'unit': 'bar',
+            'pipe': 'supply_station'
         },
-        'hot_water_temp': {
+        
+        # Шугам 2: Хэрэглэгч рүү (Forward to consumer)
+        'forward_to_consumer_temp': {
             'id': 2,
-            'name': 'Халуун усны температур',
+            'name': 'Хэрэглэгч рүү гарах температур',
             'type': 'temperature',
             'unit': '°C',
-            'base': 65.0,
-            'variance': 3.0,
-            'min': 55.0,
-            'max': 75.0,
-            'trend_factor': 0.03
+            'pipe': 'forward_consumer'
         },
-        # Даралт (bar)
-        'supply_pressure': {
+        'forward_to_consumer_pressure': {
             'id': 3,
-            'name': 'Орох даралт',
+            'name': 'Хэрэглэгч рүү гарах даралт',
             'type': 'pressure',
             'unit': 'bar',
-            'base': 6.0,
-            'variance': 0.3,
-            'min': 5.0,
-            'max': 8.0,
-            'trend_factor': 0.02
+            'pipe': 'forward_consumer'
         },
-        'return_pressure': {
+        
+        # Шугам 3: Хэрэглэгчээс буцах (Return from consumer)
+        'return_from_consumer_temp': {
             'id': 4,
-            'name': 'Буцах даралт',
-            'type': 'pressure',
-            'unit': 'bar',
-            'base': 4.5,
-            'variance': 0.2,
-            'min': 3.5,
-            'max': 6.0,
-            'trend_factor': 0.02
+            'name': 'Хэрэглэгчээс буцах температур',
+            'type': 'temperature',
+            'unit': '°C',
+            'pipe': 'return_consumer'
         },
-        'system_pressure': {
+        'return_from_consumer_pressure': {
             'id': 5,
-            'name': 'Системийн даралт',
+            'name': 'Хэрэглэгчээс буцах даралт',
             'type': 'pressure',
             'unit': 'bar',
-            'base': 5.2,
-            'variance': 0.25,
-            'min': 4.0,
-            'max': 7.0,
-            'trend_factor': 0.02
+            'pipe': 'return_consumer'
+        },
+        
+        # Шугам 4: Станц руу буцах (Return to station)
+        'return_to_station_temp': {
+            'id': 6,
+            'name': 'Станц руу буцах температур',
+            'type': 'temperature',
+            'unit': '°C',
+            'pipe': 'return_station'
+        },
+        'return_to_station_pressure': {
+            'id': 7,
+            'name': 'Станц руу буцах даралт',
+            'type': 'pressure',
+            'unit': 'bar',
+            'pipe': 'return_station'
         }
     }
     
-    # Логийн тохиргоо
-    LOG_FILE = "/var/log/heating_simulator.log"
+    LOG_FILE = "/var/log/heating_simulator/simulator.log"
     LOG_LEVEL = logging.INFO
 
 # ============================================
-# LOGGER ТОХИРГОО
+# LOGGER
 # ============================================
 
 def setup_logger():
-    """Логгер тохируулах"""
     logger = logging.getLogger('HeatingSimulator')
     logger.setLevel(Config.LOG_LEVEL)
     
-    # Файл handler
     try:
         file_handler = logging.FileHandler(Config.LOG_FILE)
     except PermissionError:
-        # Permission алдаа бол /tmp ашиглах
         file_handler = logging.FileHandler('/tmp/heating_simulator.log')
     
-    file_handler.setLevel(Config.LOG_LEVEL)
-    
-    # Console handler
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(Config.LOG_LEVEL)
     
-    # Формат
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        '%(asctime)s - %(levelname)s - %(message)s'
     )
     file_handler.setFormatter(formatter)
     console_handler.setFormatter(formatter)
@@ -142,116 +164,171 @@ def setup_logger():
 logger = setup_logger()
 
 # ============================================
-# МЭДРЭГЧИЙН СИМУЛЯТОР
+# ФИЗИК ДУЛААНЫ СИСТЕМ
 # ============================================
 
-class SensorSimulator:
-    """Мэдрэгчийн хийсвэр загвар"""
+class HeatingSystem:
+    """Дулааны системийн физик загвар"""
     
     def __init__(self):
-        self.time_offset = 0
-        self.last_values = {}
+        self.outdoor_temp = -15.0  # Гадны температур (°C)
+        self.time_of_day = 0
         
-        # Эхний утгууд тохируулах
-        for key, config in Config.SENSORS.items():
-            self.last_values[key] = config['base']
+        # Smooth transition-ий төлөв
+        self.last_station_temp = Config.PHYSICS['station_base_temp']
+        self.last_pressure = Config.PHYSICS['supply_pressure']
     
-    def read_sensor(self, sensor_key: str) -> float:
+    def get_outdoor_temperature(self) -> float:
         """
-        Мэдрэгчийн утга унших (симуляци)
+        Гадны температур (өдрийн болон улирлын хэлбэлзэлтэй)
         
-        Алгоритм:
-        1. Өмнөх утгаас бага зэрэг өөрчлөгдөх (smooth)
-        2. Цаг хугацааны trend (өглөө-орой хэлбэлзэл)
-        3. Random noise
-        4. Min/Max хязгаарлалт
+        Улаанбаатарын температур:
+        - Өвөл: -30°C ... -10°C
+        - Өдрийн хэлбэлзэл: ±5°C
         """
-        config = Config.SENSORS[sensor_key]
-        
-        # 1. Цагийн trend (өглөө бага, орой их)
         hour = datetime.now().hour
-        time_trend = math.sin((hour - 6) * math.pi / 12) * config['trend_factor']
         
-        # 2. Random walk (өмнөх утгаас бага зэрэг өөрчлөгдөх)
-        change = random.gauss(0, config['variance'] * 0.1)
+        # Өдрийн температурын өөрчлөлт
+        daily_variation = 5 * math.sin((hour - 6) * math.pi / 12)
         
-        # 3. Үндсэн утга руу татах (mean reversion)
-        mean_pull = (config['base'] - self.last_values[sensor_key]) * 0.1
+        # Улирлын температур (өвөл)
+        base_temp = -20.0
         
-        # 4. Шинэ утга тооцоолох
-        new_value = (
-            self.last_values[sensor_key] + 
-            change + 
-            mean_pull + 
-            time_trend * config['base']
+        return base_temp + daily_variation + random.gauss(0, 2)
+    
+    def calculate_station_supply_temp(self) -> float:
+        """
+        Дулааны станцаас ирэх температур
+        
+        Логик:
+        - Гадна хүйтэн → станц илүү халуун ус илгээнэ
+        - Гадна дулаан → станц бага халуун ус илгээнэ
+        """
+        outdoor = self.get_outdoor_temperature()
+        
+        # Гадны температураас хамааралтай compensation
+        # Гадна -30°C → станц 95°C
+        # Гадна -10°C → станц 75°C
+        temp_compensation = -outdoor * Config.PHYSICS['outdoor_temp_influence']
+        
+        target_temp = Config.PHYSICS['station_base_temp'] + temp_compensation
+        
+        # Smooth transition (хурдан өөрчлөгдөхгүй)
+        change_rate = 0.05
+        new_temp = (
+            self.last_station_temp * (1 - change_rate) +
+            target_temp * change_rate
         )
         
-        # 5. Min/Max хязгаарлалт
-        new_value = max(config['min'], min(config['max'], new_value))
+        # Шуугиан нэмэх
+        new_temp += random.gauss(0, Config.PHYSICS['temp_noise'])
         
-        # 6. Хадгалах
-        self.last_values[sensor_key] = new_value
+        # Хязгаарлалт
+        new_temp = max(70, min(100, new_temp))
         
-        return round(new_value, 2)
+        self.last_station_temp = new_temp
+        return new_temp
     
-    def read_all_sensors(self) -> Dict[str, float]:
-        """Бүх мэдрэгч унших"""
+    def calculate_all_readings(self) -> Dict[str, float]:
+        """
+        Бүх 8 мэдрэгчийн утгыг физик хамаарлын дагуу тооцоолох
+        
+        Урсгал:
+        Station (85°C, 6.5bar)
+            ↓ -2°C, -0.15bar (шугамын алдагдал)
+        Бойлер орох (83°C, 6.35bar)
+            ↓ -12°C, -0.4bar (бойлерийн алдагдал)
+        Бойлер гарах (71°C, 5.95bar)
+            ↓ -2°C, -0.15bar (шугамын алдагдал)
+        Consumer (69°C, 5.8bar)
+            ↓ Хэрэглэгч дулаан авна
+        Consumer return (55°C, 5.8bar)
+            ↓ -2°C, -0.15bar (шугамын алдагдал)
+        Station return (53°C, 5.65bar)
+        """
+        
         readings = {}
-        for sensor_key in Config.SENSORS.keys():
-            readings[sensor_key] = self.read_sensor(sensor_key)
+        
+        # 1️⃣ Шугам 1: Станцаас ирэх (Supply from station)
+        T1 = self.calculate_station_supply_temp()
+        P1 = Config.PHYSICS['supply_pressure'] + random.gauss(0, Config.PHYSICS['pressure_noise'])
+        
+        readings['supply_from_station_temp'] = round(T1, 2)
+        readings['supply_from_station_pressure'] = round(P1, 2)
+        
+        # 2️⃣ Шугам 2: Бойлер орох = Станцаас шугамын алдагдал хасах
+        pipe_loss_1 = Config.PHYSICS['pipe_heat_loss'] + random.gauss(0, 0.3)
+        pressure_drop_1 = Config.PHYSICS['pipe_pressure_drop'] + random.gauss(0, 0.02)
+        
+        T2 = T1 - pipe_loss_1
+        P2 = P1 - pressure_drop_1
+        
+        # 3️⃣ Бойлер боловсруулалт
+        boiler_temp_loss = Config.PHYSICS['boiler_heat_loss'] + random.gauss(0, 1.0)
+        boiler_pressure_drop = Config.PHYSICS['boiler_pressure_drop'] + random.gauss(0, 0.05)
+        
+        # 4️⃣ Шугам 3: Хэрэглэгч рүү (Forward to consumer)
+        T_forward = T2 - boiler_temp_loss / 2  # Бойлерийн дундах температур
+        P_forward = P2 - boiler_pressure_drop / 2
+        
+        readings['forward_to_consumer_temp'] = round(T_forward, 2)
+        readings['forward_to_consumer_pressure'] = round(P_forward, 2)
+        
+        # 5️⃣ Хэрэглэгч дулаан авна (10-15°C temperature drop)
+        consumer_temp_drop = 12 + random.gauss(0, 2)  # Хэрэглэгчийн ачаалал
+        
+        # 6️⃣ Шугам 4: Хэрэглэгчээс буцах (Return from consumer)
+        T_return = T_forward - consumer_temp_drop
+        P_return = P_forward - 0.1  # Жижиг даралтын алдагдал
+        
+        readings['return_from_consumer_temp'] = round(T_return, 2)
+        readings['return_from_consumer_pressure'] = round(P_return, 2)
+        
+        # 7️⃣ Шугам 5: Станц руу буцах шугам
+        pipe_loss_2 = Config.PHYSICS['pipe_heat_loss'] + random.gauss(0, 0.3)
+        pressure_drop_2 = Config.PHYSICS['pipe_pressure_drop'] + random.gauss(0, 0.02)
+        
+        T_return_station = T_return - pipe_loss_2
+        P_return_station = P_return - pressure_drop_2
+        
+        readings['return_to_station_temp'] = round(T_return_station, 2)
+        readings['return_to_station_pressure'] = round(P_return_station, 2)
+        
         return readings
     
-    def get_sensor_status(self) -> Dict:
-        """Мэдрэгчийн статус"""
-        status = {}
-        for key, value in self.last_values.items():
-            config = Config.SENSORS[key]
-            
-            # Хэвийн эсэхийг шалгах
-            is_normal = config['min'] <= value <= config['max']
-            
-            status[key] = {
-                'value': value,
-                'unit': config['unit'],
-                'status': 'normal' if is_normal else 'warning',
-                'min': config['min'],
-                'max': config['max']
-            }
+    def get_system_efficiency(self, readings: Dict[str, float]) -> float:
+        """Системийн үр ашиг тооцоолох"""
+        supply_temp = readings['supply_from_station_temp']
+        return_temp = readings['return_to_station_temp']
         
-        return status
+        # Delta T - Системийн үр ашигийн үзүүлэлт
+        delta_t = supply_temp - return_temp
+        
+        # Оновчтой delta T = 25-30°C
+        return delta_t
 
 # ============================================
 # ӨГӨГДӨЛ ИЛГЭЭХ
 # ============================================
 
 class DataSender:
-    """Сервер лүү өгөгдөл илгээх"""
-    
     def __init__(self, url: str):
         self.url = url
         self.session = requests.Session()
-        self.failed_count = 0
         self.success_count = 0
+        self.failed_count = 0
     
     def send(self, readings: Dict[str, float]) -> bool:
-        """
-        Өгөгдөл илгээх
-        
-        Returns:
-            bool: Амжилттай эсэх
-        """
         try:
-            # JSON payload бэлтгэх
             payload = {
                 'device': Config.DEVICE_ID,
                 'location': Config.LOCATION,
-                'ts': int(time.time() * 1000),  # Миллисекунд
-                'ts_sec': int(time.time()),      # Секунд
+                'ts': int(time.time() * 1000),
+                'ts_sec': int(time.time()),
                 'synced': True,
                 'readings': []
             }
             
-            # Мэдрэгч бүрийг нэмэх
             for key, value in readings.items():
                 sensor_config = Config.SENSORS[key]
                 payload['readings'].append({
@@ -261,50 +338,25 @@ class DataSender:
                     'unit': sensor_config['unit']
                 })
             
-            # HTTP POST
-            response = self.session.post(
-                self.url,
-                json=payload,
-                timeout=5
-            )
+            response = self.session.post(self.url, json=payload, timeout=5)
             
             if response.status_code == 200:
                 self.success_count += 1
-                logger.info(
-                    f"✅ Амжилттай илгээгдлээ: {len(readings)} мэдрэгч, "
-                    f"нийт: {self.success_count}"
-                )
+                logger.info(f"✅ Илгээгдлээ: {len(readings)} мэдрэгч")
                 return True
             else:
                 self.failed_count += 1
-                logger.error(
-                    f"❌ HTTP алдаа: {response.status_code}, "
-                    f"хариу: {response.text[:100]}"
-                )
+                logger.error(f"❌ HTTP {response.status_code}")
                 return False
                 
-        except requests.exceptions.ConnectionError:
-            self.failed_count += 1
-            logger.error(f"❌ Холболтын алдаа: Сервер рүү холбогдож чадсангүй")
-            return False
-            
-        except requests.exceptions.Timeout:
-            self.failed_count += 1
-            logger.error(f"❌ Timeout алдаа: Сервер хариу өгөхгүй байна")
-            return False
-            
         except Exception as e:
             self.failed_count += 1
             logger.error(f"❌ Алдаа: {str(e)}")
             return False
     
     def get_statistics(self) -> Dict:
-        """Статистик мэдээлэл"""
         total = self.success_count + self.failed_count
-        success_rate = (
-            (self.success_count / total * 100) if total > 0 else 0
-        )
-        
+        success_rate = (self.success_count / total * 100) if total > 0 else 0
         return {
             'success': self.success_count,
             'failed': self.failed_count,
@@ -317,26 +369,27 @@ class DataSender:
 # ============================================
 
 class HeatingSubstationSimulator:
-    """Дулааны төвийн симулятор"""
-    
     def __init__(self):
-        self.sensor_sim = SensorSimulator()
+        self.heating_system = HeatingSystem()
         self.data_sender = DataSender(Config.SERVER_URL)
         self.running = False
         self.iteration = 0
         
-        logger.info("=" * 60)
-        logger.info("ДУЛААНЫ ТӨВИЙН СИМУЛЯТОР ЭХЭЛЛЭЭ")
-        logger.info("=" * 60)
-        logger.info(f"Төхөөрөмж: {Config.DEVICE_ID}")
-        logger.info(f"Байршил: {Config.LOCATION}")
-        logger.info(f"Сервер: {Config.SERVER_URL}")
-        logger.info(f"Илгээх давтамж: {Config.SEND_INTERVAL} секунд")
-        logger.info(f"Мэдрэгч: {len(Config.SENSORS)} ширхэг")
-        logger.info("=" * 60)
+        logger.info("=" * 70)
+        logger.info("🏭 ДУЛААНЫ ДАХИН ДАМЖУУЛАХ ТӨВИЙН СИМУЛЯТОР")
+        logger.info("=" * 70)
+        logger.info(f"📍 Төхөөрөмж: {Config.DEVICE_ID}")
+        logger.info(f"📍 Байршил: {Config.LOCATION}")
+        logger.info(f"🌐 Сервер:   {Config.SERVER_URL}")
+        logger.info(f"⏱️  Давтамж:  {Config.SEND_INTERVAL} секунд")
+        logger.info(f"📊 Мэдрэгч:  8 ширхэг (4 шугам)")
+        logger.info("")
+        logger.info("🔄 Системийн урсгал:")
+        logger.info("   Станц → [Орох] → Бойлер → [Гарах] → Хэрэглэгч")
+        logger.info("   Станц ← [Буцах] ← Бойлер ← [Ирэх] ← Хэрэглэгч")
+        logger.info("=" * 70)
     
     def run(self):
-        """Симулятор ажиллуулах"""
         self.running = True
         
         try:
@@ -344,61 +397,80 @@ class HeatingSubstationSimulator:
                 self.iteration += 1
                 
                 # Мэдрэгч унших
-                readings = self.sensor_sim.read_all_sensors()
+                readings = self.heating_system.calculate_all_readings()
+                
+                # Үр ашиг тооцоолох
+                efficiency = self.heating_system.get_system_efficiency(readings)
                 
                 # Дэлгэцэнд харуулах
-                self._print_readings(readings)
+                self._print_readings(readings, efficiency)
                 
                 # Сервер лүү илгээх
                 self.data_sender.send(readings)
                 
-                # Статистик харуулах (10 удаад нэг)
+                # Статистик (10 удаад нэг)
                 if self.iteration % 10 == 0:
                     self._print_statistics()
                 
-                # Хүлээх
                 time.sleep(Config.SEND_INTERVAL)
                 
         except KeyboardInterrupt:
-            logger.info("\n⚠️ Хэрэглэгч зогсоолоо (Ctrl+C)")
+            logger.info("\n⚠️  Ctrl+C - Зогсож байна")
             self.stop()
         except Exception as e:
-            logger.error(f"❌ Алдаа гарлаа: {str(e)}")
+            logger.error(f"❌ Алдаа: {str(e)}")
             self.stop()
     
     def stop(self):
-        """Симулятор зогсоох"""
         self.running = False
-        logger.info("\n" + "=" * 60)
-        logger.info("СИМУЛЯТОР ЗОГСЛОО")
+        logger.info("\n" + "=" * 70)
+        logger.info("🛑 СИМУЛЯТОР ЗОГСЛОО")
         self._print_statistics()
-        logger.info("=" * 60)
+        logger.info("=" * 70)
     
-    def _print_readings(self, readings: Dict[str, float]):
-        """Мэдрэгчийн утга харуулах"""
-        logger.info(f"\n📊 Давталт #{self.iteration} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        logger.info("-" * 60)
+    def _print_readings(self, readings: Dict[str, float], efficiency: float):
+        outdoor = self.heating_system.get_outdoor_temperature()
         
-        for key, value in readings.items():
-            config = Config.SENSORS[key]
-            emoji = "🌡️" if config['type'] == 'temperature' else "📊"
-            
-            logger.info(
-                f"{emoji} {config['name']:25} = {value:6.2f} {config['unit']:4} "
-                f"[{config['min']:.1f} - {config['max']:.1f}]"
-            )
+        logger.info(f"\n{'━' * 70}")
+        logger.info(f"📊 Давталт #{self.iteration} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"🌡️  Гадны температур: {outdoor:.1f}°C")
+        logger.info(f"{'─' * 70}")
+        
+        # Шугам 1: Станцаас
+        logger.info(f"🔴 Шугам 1 - СТАНЦААС ОРОХ:")
+        logger.info(f"   Температур: {readings['supply_from_station_temp']:6.1f}°C")
+        logger.info(f"   Даралт:     {readings['supply_from_station_pressure']:6.2f} bar")
+        
+        # Шугам 2: Хэрэглэгч рүү
+        logger.info(f"🟠 Шугам 2 - ХЭРЭГЛЭГЧ РҮҮ:")
+        logger.info(f"   Температур: {readings['forward_to_consumer_temp']:6.1f}°C")
+        logger.info(f"   Даралт:     {readings['forward_to_consumer_pressure']:6.2f} bar")
+        
+        # Шугам 3: Хэрэглэгчээс
+        logger.info(f"🔵 Шугам 3 - ХЭРЭГЛЭГЧЭЭС БУЦАХ:")
+        logger.info(f"   Температур: {readings['return_from_consumer_temp']:6.1f}°C")
+        logger.info(f"   Даралт:     {readings['return_from_consumer_pressure']:6.2f} bar")
+        
+        # Шугам 4: Станц руу
+        logger.info(f"🟣 Шугам 4 - СТАНЦ РУУ БУЦАХ:")
+        logger.info(f"   Температур: {readings['return_to_station_temp']:6.1f}°C")
+        logger.info(f"   Даралт:     {readings['return_to_station_pressure']:6.2f} bar")
+        
+        # Системийн үр ашиг
+        logger.info(f"{'─' * 70}")
+        logger.info(f"⚡ ΔT (Үр ашиг):  {efficiency:.1f}°C {'✅' if 25 <= efficiency <= 35 else '⚠️'}")
+        logger.info(f"   Оновчтой: 25-35°C")
     
     def _print_statistics(self):
-        """Статистик харуулах"""
         stats = self.data_sender.get_statistics()
-        logger.info("\n" + "=" * 60)
+        logger.info(f"\n{'═' * 70}")
         logger.info("📈 СТАТИСТИК")
-        logger.info("-" * 60)
+        logger.info(f"{'─' * 70}")
         logger.info(f"✅ Амжилттай:     {stats['success']:5} удаа")
         logger.info(f"❌ Амжилтгүй:     {stats['failed']:5} удаа")
         logger.info(f"📦 Нийт:          {stats['total']:5} удаа")
         logger.info(f"📊 Амжилтын хувь: {stats['success_rate']:5.1f}%")
-        logger.info("=" * 60)
+        logger.info(f"{'═' * 70}")
 
 # ============================================
 # SIGNAL HANDLER
@@ -407,8 +479,7 @@ class HeatingSubstationSimulator:
 simulator = None
 
 def signal_handler(signum, frame):
-    """SIGTERM, SIGINT handler"""
-    logger.info(f"\n⚠️ Signal {signum} хүлээн авлаа")
+    logger.info(f"\n⚠️  Signal {signum} хүлээн авлаа")
     if simulator:
         simulator.stop()
     sys.exit(0)
@@ -418,14 +489,11 @@ def signal_handler(signum, frame):
 # ============================================
 
 def main():
-    """Үндсэн функц"""
     global simulator
     
-    # Signal handlers
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     
-    # Симулятор эхлүүлэх
     simulator = HeatingSubstationSimulator()
     simulator.run()
 
