@@ -42,7 +42,7 @@ class Config:
     LOCATION = "Улаанбаатар, Сүхбаатар дүүрэг"
     
     # Сервер
-    SERVER_URL = "http://localhost:3000/api/readings/batch"
+    SERVER_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/api/readings/batch"
     SEND_INTERVAL = 3  # секунд
     
     # Физик параметрүүд

@@ -26,7 +26,7 @@ services:
   api:
     image: erdenetsogt/api-web:latest
     container_name: api
-    restart: always
+    restart: always    
     network_mode: service:tailscale
   tailscale:
     image: tailscale/tailscale:latest
@@ -39,7 +39,7 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     environment:
-      TS_AUTHKEY: tskey-auth-k2731ga6Mi11CNTRL-Wtf1EEtBdZA3Z2uu81WEaA9jPjYJAdpcf 
+      TS_AUTHKEY: tskey-auth-kWLiuDp67q11CNTRL-4QEeUH774fEdbdxGAMsefEdZgoWb8FnTc 
       TS_STATE_DIR: /var/lib/tailscale
       TS_ACCEPT_DNS: "true" # Optional: allows Tailscale to manage DNS within the container
     restart: unless-stopped
