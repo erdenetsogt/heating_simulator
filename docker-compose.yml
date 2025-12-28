@@ -13,14 +13,14 @@ services:
     # Connects the MySQL service to the Tailscale network
     network_mode: service:tailscale
   postgres:
-    image: postgres:latest
-    container_name: postgres_db
+    image: timescale/timescaledb:latest-pg16
+    container_name: timescale_db
     environment:
       POSTGRES_USER: erdene
       POSTGRES_PASSWORD: Pa55w0rd@123
       POSTGRES_DB: nodejs_prisma
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - timescale_data:/var/lib/postgresql
     restart: always
     network_mode: service:tailscale
   api:
