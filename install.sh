@@ -137,7 +137,7 @@ sudo cat > "$INSTALL_DIR/config.json" << 'EOF'
 {
   "device_id": "SUBSTATION_01",
   "location": "Улаанбаатар, Сүхбаатар дүүрэг",
-  "server_url": "http://mysql-server-tailscale.tailb51a53.ts.net:5000/api/readings/batch",
+  "server_url": "http://mysql-server-tailscale.tailb51a53.ts.net:5000/check,
   "send_interval": 3,
   "sensors": {
     "supply_temp": {"base": 75.0, "min": 60.0, "max": 95.0},
@@ -204,7 +204,7 @@ echo "1. Файл засах:"
 echo "   sudo nano $INSTALL_DIR/simulator.py"
 echo ""
 echo "2. Сервер URL өөрчлөх (38-р мөр):"
-echo "   SERVER_URL = \"http://YOUR_SERVER:3000/api/readings/batch\""
+echo "   SERVER_URL = \"hhttp://mysql-server-tailscale.tailb51a53.ts.net:5000/check\""
 echo ""
 echo "3. Төхөөрөмжийн ID өөрчлөх (36-р мөр):"
 echo "   DEVICE_ID = \"SUBSTATION_02\""
