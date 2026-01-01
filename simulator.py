@@ -326,7 +326,7 @@ class GetSensorIDs:
     def fetch(self) -> bool:        
         try:
             logger.info(self.url)
-            response = self.session.get(self.url, timeout=5)
+            response = self.session.get("http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/1", timeout=5)
             if response.status_code == 200:
                 
                 data = response.json()
