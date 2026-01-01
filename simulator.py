@@ -323,7 +323,7 @@ class GetSensorIDs:
     def __init__(self, url: str):
         self.url = url
         self.session = requests.Session()
-    def fetch(self) -> Dict[str, int]:
+    def fetch(self):        
         try:
             response = self.session.get(self.url, timeout=5)
             if response.status_code == 200:
