@@ -334,6 +334,9 @@ class GetSensorIDs:
                         if Config.SENSORS['sensorObjectLocationId'] == sensor['sensorObjectLocationId']:
                             Config.SENSORS['id'] = sensor['id']
                 logger.info("✅ Мэдрэгчийн ID-үүдийг амжилттай авлаа")
+                
+                for key, config in Config.SENSORS.items():
+                    logger.info(f"   - {key}: ID={config['id']} sensorObjectLocationId={config['sensorObjectLocationId']}")
                 return sensor_ids
             else:
                 logger.error(f"❌ HTTP {response.status_code} while fetching sensor IDs")
