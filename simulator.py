@@ -255,7 +255,7 @@ class HeatingSystem:
             ↓ -2°C, -0.15bar (шугамын алдагдал)
         Station return (53°C, 5.65bar)
         """
-        GetSensorIDs(Config.GET_SENSOR_ID_URL).fetch()
+        
         readings = {}
         
         # 1️⃣ Шугам 1: Станцаас ирэх (Supply from station)
@@ -328,9 +328,9 @@ class GetSensorIDs:
             'Accept': 'application/json',
             'User-Agent': 'Mozilla/5.0'
         })
-    def fetch(self):        
+    def fetch(self,url):        
         url = f'http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/1'
-        logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{url}")
+        
         try:
             logger.info(url)
             
