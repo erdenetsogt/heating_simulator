@@ -329,7 +329,7 @@ class GetSensorIDs:
             'User-Agent': 'Mozilla/5.0'
         })
     def fetch(self,id):        
-        url = f'{self.base_url}/m/sensor-objects-in-measurement-object/{id}'
+        url = f'{self.base_url}/m/sensor-objects-in-measurement-object/1'
         logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{url}")
         try:
             logger.info(self.url)
