@@ -329,10 +329,10 @@ class GetSensorIDs:
             'User-Agent': 'Mozilla/5.0'
         })
     def fetch(self):        
-        url = f'{self.base_url}/m/sensor-objects-in-measurement-object/1'
+        url1 = f'{self.base_url}/m/sensor-objects-in-measurement-object/1'
         logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{url}")
         try:
-            logger.info(url)
+            logger.info(url1)
             
             response = self.session.get(url, timeout=5)
             if response.status_code == 200:
@@ -414,7 +414,7 @@ class DataSender:
 
 class HeatingSubstationSimulator:
     def __init__(self):
-        GetSensorIDs.fetch()
+        GetSensorIDs.fetch(self)
         self.heating_system = HeatingSystem()
         self.data_sender = DataSender(Config.SERVER_URL)
         self.running = False
