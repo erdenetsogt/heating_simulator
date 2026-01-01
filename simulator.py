@@ -329,10 +329,10 @@ class GetSensorIDs:
             'User-Agent': 'Mozilla/5.0'
         })
     def fetch(self):        
-        url1 = f'{self.base_url}/m/sensor-objects-in-measurement-object/1'
+        url = f'http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/1'
         logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{url}")
         try:
-            logger.info(url1)
+            logger.info(url)
             
             response = self.session.get(url, timeout=5)
             if response.status_code == 200:
