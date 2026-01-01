@@ -414,7 +414,7 @@ class DataSender:
 
 class HeatingSubstationSimulator:
     def __init__(self):
-        GetSensorIDs(Config.GET_SENSOR_ID_URL).fetch(self)
+        self.get_sensorids = GetSensorIDs(Config.GET_SENSOR_ID_URL)
         self.heating_system = HeatingSystem()
         self.data_sender = DataSender(Config.SERVER_URL)
         self.running = False
@@ -435,6 +435,7 @@ class HeatingSubstationSimulator:
         logger.info("=" * 70)
     
     def run(self):
+        self.get_sensorids.fetch()
         self.running = True
         
         try:
