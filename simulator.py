@@ -321,7 +321,7 @@ class HeatingSystem:
 # ============================================
 class GetSensorIDs:
     def __init__(self):
-        self.url = url
+        #self.url = url
         self.base_url = f'http://mysql-server-tailscale.tailb51a53.ts.net:5000'  
         self.session = requests.Session()
         self.session.headers.update({
