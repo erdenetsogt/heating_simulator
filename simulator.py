@@ -43,7 +43,7 @@ class Config:
     
     # Сервер
     SERVER_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/check"
-    GET_SENSOR_ID_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/1"
+    GET_SENSOR_ID_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/2"
     SEND_INTERVAL = 3  # секунд
     
     # Физик параметрүүд
@@ -115,7 +115,7 @@ class Config:
         },
         'return_from_consumer_pressure': {
             'id':0,
-            'sensorObjectLocationId': 6,
+            'sensorObjectLocationId': 8,
             'name': 'Хэрэглэгчээс буцах даралт',
             'typeId': 2,
             'unit': 'bar',
@@ -337,13 +337,13 @@ class GetSensorIDs:
             response = self.session.get(self.url, timeout=5)
             if response.status_code == 201:
                 
-                data = response.json()
-                sensor_ids = {}
+                data = response.json()                
                 logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{data}")
                 for sensor in data:
                     for key, config in Config.SENSORS.items():
                         if Config.SENSORS[key]['sensorObjectLocationId'] == sensor['sensorObjectLocationId']:
                             Config.SENSORS[key]['id'] = sensor['id']
+                            
                 logger.info("✅ Мэдрэгчийн ID-үүдийг амжилттай авлаа")
                 
                 for key, config in Config.SENSORS.items():
