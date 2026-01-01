@@ -403,7 +403,7 @@ class DataSender:
 
 class HeatingSubstationSimulator:
     def __init__(self):
-        #GetSensorIDs.fetch(Config.GET_SENSOR_ID_URL)
+        GetSensorIDs.fetch(Config.GET_SENSOR_ID_URL)
         self.heating_system = HeatingSystem()
         self.data_sender = DataSender(Config.SERVER_URL)
         self.running = False
