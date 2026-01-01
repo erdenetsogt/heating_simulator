@@ -323,7 +323,7 @@ class GetSensorIDs:
     def __init__(self, url: str):
         self.url = url
         self.session = requests.Session()
-    def fetch(self):        
+    def fetch(self) -> bool:        
         try:
             logger.info(self.url)
             response = self.session.get(self.url, timeout=5)
@@ -340,7 +340,7 @@ class GetSensorIDs:
                 
                 # for key, config in Config.SENSORS.items():
                 #     logger.info(f"   - {key}: ID={config['id']} sensorObjectLocationId={config['sensorObjectLocationId']}")
-                return data
+                return True
             else:
                 logger.error(f"❌ HTTP {response.status_code} while fetching sensor IDs")
                 return {}
