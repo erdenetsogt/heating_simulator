@@ -322,12 +322,18 @@ class HeatingSystem:
 class GetSensorIDs:
     def __init__(self, url: str):
         self.url = url
+        self.base_url = 'http://mysql-server-tailscale.tailb51a53.ts.net:5000'  
         self.session = requests.Session()
-    def fetch(self) -> bool:        
+        self.session.headers.update({
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0'
+        })
+    def fetch(self,id):        
+        url = f'{self.base_url}/m/sensor-objects-in-measurement-object/{id}'
         try:
             logger.info(self.url)
-            id = 1 
-            response = self.session.get(f"https://www.news.mn", timeout=5)
+            
+            response = self.session.get(url, timeout=5)
             if response.status_code == 200:
                 
                 data = response.json()
