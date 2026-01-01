@@ -325,6 +325,7 @@ class GetSensorIDs:
         self.session = requests.Session()
     def fetch(self):        
         try:
+            logger.info(self.url)
             response = self.session.get(self.url, timeout=5)
             if response.status_code == 200:
                 
