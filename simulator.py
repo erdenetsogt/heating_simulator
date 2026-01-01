@@ -42,7 +42,7 @@ class Config:
     LOCATION = "Улаанбаатар, Сүхбаатар дүүрэг"
     
     # Сервер
-    SERVER_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/check"
+    SERVER_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/v/value"
     GET_SENSOR_ID_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/2"
     SEND_INTERVAL = 3  # секунд
     
@@ -365,21 +365,15 @@ class DataSender:
     def send(self, readings: Dict[str, float]) -> bool:
         try:
             payload = {
-                'device': Config.DEVICE_ID,
-                'location': Config.LOCATION,
-                'ts': int(time.time() * 1000),
-                'ts_sec': int(time.time()),
-                'synced': True,
-                'readings': []
+                'time': datetime.now().isoformat(),                
+                'sensorObjects': []
             }
             
             for key, value in readings.items():
                 sensor_config = Config.SENSORS[key]
-                payload['readings'].append({
-                    'id': sensor_config['id'],
-                    'name': key,
-                    'value': value,
-                    'unit': sensor_config['unit']
+                payload['sensorObjects'].append({
+                    'sensorObjectId': sensor_config['id'],                    
+                    'value': value,                    
                 })
             
             response = self.session.post(self.url, json=payload, timeout=5)
