@@ -330,6 +330,7 @@ class GetSensorIDs:
         })
     def fetch(self,id):        
         url = f'{self.base_url}/m/sensor-objects-in-measurement-object/{id}'
+        logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{url}")
         try:
             logger.info(self.url)
             
