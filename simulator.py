@@ -342,8 +342,8 @@ class GetSensorIDs:
                 logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{data}")
                 for sensor in data:
                     for key, config in Config.SENSORS.items():
-                        if Config.SENSORS['sensorObjectLocationId'] == sensor['sensorObjectLocationId']:
-                            Config.SENSORS['id'] = sensor['id']
+                        if Config.SENSORS[key]['sensorObjectLocationId'] == sensor['sensorObjectLocationId']:
+                            Config.SENSORS[key]['id'] = sensor['id']
                 logger.info("✅ Мэдрэгчийн ID-үүдийг амжилттай авлаа")
                 
                 for key, config in Config.SENSORS.items():
