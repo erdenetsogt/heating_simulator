@@ -255,7 +255,7 @@ class HeatingSystem:
             ↓ -2°C, -0.15bar (шугамын алдагдал)
         Station return (53°C, 5.65bar)
         """
-        
+        GetSensorIDs(Config.GET_SENSOR_ID_URL).fetch()
         readings = {}
         
         # 1️⃣ Шугам 1: Станцаас ирэх (Supply from station)
@@ -403,7 +403,7 @@ class DataSender:
 
 class HeatingSubstationSimulator:
     def __init__(self):
-        GetSensorIDs(Config.GET_SENSOR_ID_URL).fetch()
+        
         self.heating_system = HeatingSystem()
         self.data_sender = DataSender(Config.SERVER_URL)
         self.running = False
