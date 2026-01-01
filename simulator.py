@@ -375,7 +375,7 @@ class DataSender:
                     'sensorObjectId': sensor_config['id'],                    
                     'value': value,                    
                 })
-            logger.debug(f"Илгээх өгөгдөл: {json.dumps(payload)}")
+            logger.info(f"Илгээх өгөгдөл: {json.dumps(payload)}")
             response = self.session.post(self.url, json=payload, timeout=5)
             
             if response.status_code == 200:
