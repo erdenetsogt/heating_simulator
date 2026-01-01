@@ -335,19 +335,19 @@ class GetSensorIDs:
             logger.info(self.url)
             
             response = self.session.get(self.url, timeout=5)
-            if response.status_code == 200:
+            if response.status_code == 201:
                 
                 data = response.json()
                 sensor_ids = {}
                 logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{data}")
-                # for sensor in data.get([]):
-                #     for key, config in Config.SENSORS.items():
-                #         if Config.SENSORS['sensorObjectLocationId'] == sensor['sensorObjectLocationId']:
-                #             Config.SENSORS['id'] = sensor['id']
-                # logger.info("✅ Мэдрэгчийн ID-үүдийг амжилттай авлаа")
+                for sensor in data:
+                    for key, config in Config.SENSORS.items():
+                        if Config.SENSORS['sensorObjectLocationId'] == sensor['sensorObjectLocationId']:
+                            Config.SENSORS['id'] = sensor['id']
+                logger.info("✅ Мэдрэгчийн ID-үүдийг амжилттай авлаа")
                 
-                # for key, config in Config.SENSORS.items():
-                #     logger.info(f"   - {key}: ID={config['id']} sensorObjectLocationId={config['sensorObjectLocationId']}")
+                for key, config in Config.SENSORS.items():
+                    logger.info(f"   - {key}: ID={config['id']} sensorObjectLocationId={config['sensorObjectLocationId']}")
                 return True
             else:
                 logger.error(f"❌ HTTP {response.status_code} while fetching sensor IDs")
