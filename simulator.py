@@ -327,9 +327,10 @@ class GetSensorIDs:
         try:
             response = self.session.get(self.url, timeout=5)
             if response.status_code == 200:
-                logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...")
+                
                 data = response.json()
                 sensor_ids = {}
+                logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{data}")
                 for sensor in data.get([]):
                     for key, config in Config.SENSORS.items():
                         if Config.SENSORS['sensorObjectLocationId'] == sensor['sensorObjectLocationId']:
