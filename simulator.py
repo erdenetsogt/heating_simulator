@@ -320,21 +320,21 @@ class HeatingSystem:
 # ӨГӨГДӨЛ ИЛГЭЭХ
 # ============================================
 class GetSensorIDs:
-    def __init__(self):
+    def __init__(self,url: str):
         #self.url = url
-        self.base_url = f'http://mysql-server-tailscale.tailb51a53.ts.net:5000'  
+        self.url = url  
         self.session = requests.Session()
         self.session.headers.update({
             'Accept': 'application/json',
             'User-Agent': 'Mozilla/5.0'
         })
-    def fetch(self,url):        
-        url = f'http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/1'
+    def fetch(self):        
+        #url = f'http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/1'
         
         try:
-            logger.info(url)
+            logger.info(self.url)
             
-            response = self.session.get(url, timeout=5)
+            response = self.session.get(self.url, timeout=5)
             if response.status_code == 200:
                 
                 data = response.json()
@@ -414,7 +414,7 @@ class DataSender:
 
 class HeatingSubstationSimulator:
     def __init__(self):
-        GetSensorIDs.fetch(self)
+        GetSensorIDs(Config.GET_SENSOR_ID_URL).fetch(self)
         self.heating_system = HeatingSystem()
         self.data_sender = DataSender(Config.SERVER_URL)
         self.running = False
