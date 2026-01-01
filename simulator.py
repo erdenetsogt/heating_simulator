@@ -328,11 +328,11 @@ class GetSensorIDs:
             'Accept': 'application/json',
             'User-Agent': 'Mozilla/5.0'
         })
-    def fetch(self):        
+    def fetch(self,url):        
         url = f'{self.base_url}/m/sensor-objects-in-measurement-object/1'
         logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...{url}")
         try:
-            logger.info(self.url)
+            logger.info(url)
             
             response = self.session.get(url, timeout=5)
             if response.status_code == 200:
