@@ -327,6 +327,7 @@ class GetSensorIDs:
         try:
             response = self.session.get(self.url, timeout=5)
             if response.status_code == 200:
+                logger.info("🔍 Мэдрэгчийн ID-үүдийг серверээс авч байна...")
                 data = response.json()
                 sensor_ids = {}
                 for sensor in data.get([]):
