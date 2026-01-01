@@ -12,7 +12,7 @@ class SensorDataFetcher:
     
     def get_sensor_objects(self, measurement_id):
         """Fetch sensor objects for a given measurement ID"""
-        url = f"{self.base_url}/m/sensor-objects-in-measurement-object/{measurement_id}"
+        url = f'http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/1'
         
         try:
             response = self.session.get(url, timeout=10)
