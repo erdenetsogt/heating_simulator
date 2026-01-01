@@ -43,6 +43,7 @@ class Config:
     
     # Сервер
     SERVER_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/check"
+    GET_SENSOR_ID_URL = "http://mysql-server-tailscale.tailb51a53.ts.net:5000/m/sensor-objects-in-measurement-object/1"
     SEND_INTERVAL = 3  # секунд
     
     # Физик параметрүүд
@@ -69,64 +70,72 @@ class Config:
     SENSORS = {
         # Шугам 1: Станцаас ирэх (Supply from station)
         'supply_from_station_temp': {
-            'id': 0,
+            'id':0,
+            'sensorObjectLocationId': 1,
             'name': 'Станцаас ирэх температур',
-            'type': 'temperature',
+            'typeId': 1,
             'unit': '°C',
             'pipe': 'supply_station'
         },
         'supply_from_station_pressure': {
-            'id': 1,
+            'id':0,
+            'sensorObjectLocationId': 5,
             'name': 'Станцаас ирэх даралт',
-            'type': 'pressure',
+            'typeId': 2,
             'unit': 'bar',
             'pipe': 'supply_station'
         },
         
         # Шугам 2: Хэрэглэгч рүү (Forward to consumer)
         'forward_to_consumer_temp': {
-            'id': 2,
+            'id':0,
+            'sensorObjectLocationId': 3,
             'name': 'Хэрэглэгч рүү гарах температур',
-            'type': 'temperature',
+            'typeId': 1,
             'unit': '°C',
             'pipe': 'forward_consumer'
         },
         'forward_to_consumer_pressure': {
-            'id': 3,
+            'id':0,
+            'sensorObjectLocationId': 7,
             'name': 'Хэрэглэгч рүү гарах даралт',
-            'type': 'pressure',
+            'typeId': 2,
             'unit': 'bar',
             'pipe': 'forward_consumer'
         },
         
         # Шугам 3: Хэрэглэгчээс буцах (Return from consumer)
         'return_from_consumer_temp': {
-            'id': 4,
+            'id':0,
+            'sensorObjectLocationId': 4,
             'name': 'Хэрэглэгчээс буцах температур',
-            'type': 'temperature',
+            'typeId': 1,
             'unit': '°C',
             'pipe': 'return_consumer'
         },
         'return_from_consumer_pressure': {
-            'id': 5,
+            'id':0,
+            'sensorObjectLocationId': 6,
             'name': 'Хэрэглэгчээс буцах даралт',
-            'type': 'pressure',
+            'typeId': 2,
             'unit': 'bar',
             'pipe': 'return_consumer'
         },
         
         # Шугам 4: Станц руу буцах (Return to station)
         'return_to_station_temp': {
-            'id': 6,
+            'id':0,
+            'sensorObjectLocationId': 2,
             'name': 'Станц руу буцах температур',
-            'type': 'temperature',
+            'typeId': 1,
             'unit': '°C',
             'pipe': 'return_station'
         },
         'return_to_station_pressure': {
-            'id': 7,
+            'id':0,
+            'sensorObjectLocationId': 6,
             'name': 'Станц руу буцах даралт',
-            'type': 'pressure',
+            'typeId': 2,
             'unit': 'bar',
             'pipe': 'return_station'
         }
@@ -310,7 +319,28 @@ class HeatingSystem:
 # ============================================
 # ӨГӨГДӨЛ ИЛГЭЭХ
 # ============================================
-
+class GetSensorIDs:
+    def __init__(self, url: str):
+        self.url = url
+        self.session = requests.Session()
+    def fetch(self) -> Dict[str, int]:
+        try:
+            response = self.session.get(self.url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                sensor_ids = {}
+                for sensor in data.get([]):
+                    for key, config in Config.SENSORS.items():
+                        if Config.SENSORS['sensorObjectLocationId'] == sensor['sensorObjectLocationId']:
+                            Config.SENSORS['id'] = sensor['id']
+                logger.info("✅ Мэдрэгчийн ID-үүдийг амжилттай авлаа")
+                return sensor_ids
+            else:
+                logger.error(f"❌ HTTP {response.status_code} while fetching sensor IDs")
+                return {}
+        except Exception as e:
+            logger.error(f"❌ Error fetching sensor IDs: {str(e)}")
+            return {}
 class DataSender:
     def __init__(self, url: str):
         self.url = url
@@ -334,7 +364,7 @@ class DataSender:
                 payload['readings'].append({
                     'id': sensor_config['id'],
                     'name': key,
-                    'v': value,
+                    'value': value,
                     'unit': sensor_config['unit']
                 })
             
@@ -370,6 +400,7 @@ class DataSender:
 
 class HeatingSubstationSimulator:
     def __init__(self):
+        GetSensorIDs(Config.GET_SENSOR_ID_URL).fetch()
         self.heating_system = HeatingSystem()
         self.data_sender = DataSender(Config.SERVER_URL)
         self.running = False
