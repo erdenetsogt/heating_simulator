@@ -14,7 +14,7 @@ sudo systemctl disable "$SERVICE_NAME"
 # 3. Remove the service unit file from systemd directories
 # Note: Most custom services are in /etc/systemd/system/
 sudo rm "/etc/systemd/system/$SERVICE_NAME.service"
-
+sudo rm "/var/log/$SERVICE_NAME/simulator.log"
 # 4. Reload the systemd daemon to apply changes
 sudo systemctl daemon-reload
 
