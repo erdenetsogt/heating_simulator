@@ -27,7 +27,7 @@ import logging
 import random
 import math
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Tuple
 import signal
 import sys
@@ -361,11 +361,11 @@ class DataSender:
         self.session = requests.Session()
         self.success_count = 0
         self.failed_count = 0
-    
+        self.timezone = timezone(timedelta(hours=8))  # GMT+8
     def send(self, readings: Dict[str, float]) -> bool:
         try:
             payload = {
-                'time': datetime.now().isoformat(),                
+                'time': datetime.now(self.timezone).isoformat(),                
                 'sensorObjects': []
             }
             
