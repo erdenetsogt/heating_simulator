@@ -23,6 +23,21 @@ services:
       - timescale_data:/var/lib/postgresql
     restart: always
     network_mode: service:tailscale
+  odoo: 
+    image: odoo:17.0
+    depends_on:
+      - postgres
+    ports: 
+      - 8080:8069
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - ./config:/etc/odoo
+      - ./addons:/mnt/extra-addons
+    environment:
+      - HOST=timescale_db
+      - USER=erdene
+      - PASSWORD=Pa55w0rd@123
+    container_name: odoo_app
   api:
     image: erdenetsogt/api-web:latest
     container_name: api
@@ -48,3 +63,4 @@ volumes:
   mysql_data:
   #tailscale_state:
   postgres_data:
+  odoo_data:
