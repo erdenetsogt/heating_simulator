@@ -22,16 +22,16 @@ try:
         # 4 температурын мэдрэгчийн виртуал өгөгдөл (Цельс)
         # Жишээ: Төвийн шугам, Хэрэглээний халуун ус, Халаалтын өгөх/буцах шугам
         telemetry_data = {
-            "temp_sensor_1": round(random.uniform(70.0, 85.0), 2),
-            "temp_sensor_2": round(random.uniform(50.0, 65.0), 2),
-            "temp_sensor_3": round(random.uniform(60.0, 75.0), 2),
-            "temp_sensor_4": round(random.uniform(40.0, 55.0), 2),
+            "temp_in_fac": round(random.uniform(70.0, 85.0), 2),
+            "temp_out_fac": round(random.uniform(50.0, 65.0), 2),
+            "temp_in_cus": round(random.uniform(60.0, 75.0), 2),
+            "temp_out_cus": round(random.uniform(40.0, 55.0), 2),
             
             # 4 даралтын мэдрэгчийн виртуал өгөгдөл (Бар эсвэл Паскаль)
-            "press_sensor_1": round(random.uniform(4.5, 6.0), 2),
-            "press_sensor_2": round(random.uniform(3.0, 4.5), 2),
-            "press_sensor_3": round(random.uniform(4.0, 5.5), 2),
-            "press_sensor_4": round(random.uniform(2.5, 3.8), 2)
+            "press_in_fac": round(random.uniform(4.5, 6.0), 2),
+            "press_out_fac": round(random.uniform(3.0, 4.5), 2),
+            "press_in_cus": round(random.uniform(4.0, 5.5), 2),
+            "press_out_cus": round(random.uniform(2.5, 3.8), 2)
         }
 
         # Өгөгдлийг JSON хэлбэрт шилжүүлж, ThingsBoard-ын стандарт сэдэв (topic) рүү илгээх
