@@ -1,0 +1,26 @@
+[Unit]
+Description=ThingsBoard Virtual Sensor Python Service
+After=network.target
+
+[Service]
+# Скриптийг ажиллуулах Ubuntu хэрэглэгчийн нэр (жишээ нь: ubuntu эсвэл root)
+User=test
+
+# Таны код байрлаж буй GitHub-ээс татсан хавтасны зам
+WorkingDirectory=/home/test/sensor
+
+# Python-ийг бүтэн замаар нь зааж, араас нь скрипт файлын нэрийг бичнэ
+ExecStart=/home/test/sensor/venv/bin/python /home/test/sensor/uddt_simulator.py
+
+# Код ямар нэг байдлаар алдаа зааж зогсвол 5 секундын дараа автоматаар дахин ажиллуулна
+Restart=always
+RestartSec=5
+
+# Лог гаргах тохиргоо
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=tb-virtual-sensor
+
+[Install]
+WantedBy=multi-user.target
+
